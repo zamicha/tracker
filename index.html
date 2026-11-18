@@ -16,17 +16,21 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>Streaks</title>
 <style>
-/* Layout: single mobile column, day header + habit cards, fixed bottom tab bar. System fonts only: no third-party requests. */
+/* Layout: single mobile column, day header + habit cards, fixed bottom tab bar. System fonts only: no third-party requests.
+   Semantic colors: good = geschafft/clean, warn = Ausrutscher im Puffer / mittlere Note, bad = nicht geschafft / schlechte Note. */
 :root {
   --bg: #F2F4F6;
   --surface: #FFFFFF;
   --line: #DDE2E7;
   --fg: #14181D;
   --muted: #5F6B77;
-  --pos: #1F8A55;
-  --pos-soft: #E1F3E9;
-  --neg: #4B57C9;
-  --neg-soft: #E5E7FA;
+  --good: #1F8A55;
+  --good-soft: #E1F3E9;
+  --warn: #C98A00;
+  --warn-soft: #FBF1D9;
+  --bad: #D23C3C;
+  --bad-soft: #FBE3E1;
+  --accent: #4B57C9;
   --flame: #E8661A;
   --empty: #E6EAEE;
   --font-display: ui-rounded, "SF Pro Rounded", -apple-system, "Segoe UI", system-ui, sans-serif;
@@ -36,8 +40,8 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0E1115; --surface: #171B21; --line: #262C34; --fg: #EDF0F3; --muted: #93A0AD;
-    --pos: #4CC787; --pos-soft: #183326; --neg: #8D97F2; --neg-soft: #1E2240;
-    --flame: #FF8A3D; --empty: #222830; color-scheme: dark;
+    --good: #4CC787; --good-soft: #183326; --warn: #F2B53A; --warn-soft: #3A2E12; --bad: #F06A6A; --bad-soft: #3D1C1C;
+    --accent: #8D97F2; --flame: #FF8A3D; --empty: #222830; color-scheme: dark;
   }
 }
 * { box-sizing: border-box; }
@@ -57,7 +61,7 @@ h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
 h2 { font-size: 18px; font-weight: 600; }
 p { margin: 0; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
-button:focus-visible, input:focus-visible, label:focus-within { outline: 2px solid var(--neg); outline-offset: 2px; }
+button:focus-visible, input:focus-visible, label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .num { font-variant-numeric: tabular-nums; }
 .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
 
@@ -66,103 +70,136 @@ button:focus-visible, input:focus-visible, label:focus-within { outline: 2px sol
 .nav { display: flex; gap: 6px; }
 .iconbtn { width: 40px; height: 40px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; font-size: 18px; flex: none; }
 .iconbtn:disabled { opacity: .35; cursor: default; }
-.todaychip { font-size: 13px; color: var(--neg); font-weight: 600; }
+.todaychip { font-size: 13px; color: var(--accent); font-weight: 600; }
 
 .summary { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
 .ring { flex: none; width: 56px; height: 56px; }
 .ring circle { fill: none; stroke-width: 6; }
 .ring .track { stroke: var(--empty); }
-.ring .val { stroke: var(--pos); stroke-linecap: round; transition: stroke-dashoffset .4s ease; }
+.ring .val { stroke: var(--good); stroke-linecap: round; transition: stroke-dashoffset .4s ease; }
 .ring text { fill: var(--fg); font-family: var(--font-display); font-weight: 700; font-size: 15px; }
 .summary .msg { font-weight: 600; }
 .summary .sub { color: var(--muted); font-size: 13px; }
 
 .cards { display: flex; flex-direction: column; gap: 10px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; transition: background .2s, border-color .2s; }
-.card.done.pos { background: var(--pos-soft); border-color: var(--pos); }
-.card.done.neg { background: var(--neg-soft); border-color: var(--neg); }
+.card.good { background: var(--good-soft); border-color: var(--good); }
+.card.warn { background: var(--warn-soft); border-color: var(--warn); }
+.card.bad { background: var(--bad-soft); border-color: var(--bad); }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .hname { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .hname h3 { font-size: 19px; font-weight: 600; overflow-wrap: anywhere; }
-.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.tag { font-size: 12px; padding: 2px 8px; border-radius: 99px; font-weight: 600; white-space: nowrap; }
-.tag.pos { background: var(--pos-soft); color: var(--pos); }
-.tag.neg { background: var(--neg-soft); color: var(--neg); }
-.tag.plain { color: var(--muted); }
-.card.done .tag.pos, .card.done .tag.neg { background: var(--surface); }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.tag { font-size: 12px; padding: 2px 8px; border-radius: 99px; font-weight: 600; white-space: nowrap; background: var(--empty); color: var(--muted); }
+.tag.good { background: var(--good-soft); color: var(--good); }
+.tag.warn { background: var(--warn-soft); color: var(--warn); }
+.tag.bad { background: var(--bad-soft); color: var(--bad); }
+.card.good .tag, .card.warn .tag, .card.bad .tag { background: var(--surface); }
 .streak { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--flame); }
 .streak.zero { color: var(--muted); font-weight: 500; }
 .streak svg { width: 14px; height: 14px; fill: currentColor; }
 .best { font-size: 12px; color: var(--muted); }
-.check { flex: none; width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; background: var(--bg); transition: transform .15s; }
-.check svg { width: 26px; height: 26px; stroke: var(--muted); stroke-width: 3; fill: none; opacity: .35; }
-.card.pos.done .check { background: var(--pos); border-color: var(--pos); }
-.card.neg.done .check { background: var(--neg); border-color: var(--neg); }
-.card.done .check svg { stroke: #fff; opacity: 1; }
-.check:active { transform: scale(.92); }
-.cleanlbl { font-size: 11px; color: var(--muted); text-align: center; margin-top: 2px; }
+.buf { font-size: 12px; font-weight: 600; }
+.buf.good { color: var(--good); } .buf.warn { color: var(--warn); } .buf.bad { color: var(--bad); }
+
+.choice { display: flex; gap: 10px; flex: none; }
+.choice > div { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.cbtn { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; background: var(--bg); transition: transform .15s; }
+.cbtn svg { width: 22px; height: 22px; stroke: var(--muted); stroke-width: 3; fill: none; opacity: .4; }
+.cbtn:active { transform: scale(.92); }
+.cbtn.yes.on { background: var(--good); border-color: var(--good); }
+.cbtn.no.on { background: var(--bad); border-color: var(--bad); }
+.cbtn.no.on.buffered { background: var(--warn); border-color: var(--warn); }
+.cbtn.on svg { stroke: #fff; opacity: 1; }
+.clbl { font-size: 11px; color: var(--muted); }
+
 .variants { display: flex; gap: 8px; flex-wrap: wrap; }
 .vbtn { flex: 1 1 40%; min-height: 44px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); font-weight: 600; }
-.vbtn.on { background: var(--pos); border-color: var(--pos); color: #fff; }
+.vbtn.on { background: var(--good); border-color: var(--good); color: #fff; }
 .weekprog { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
-.weekprog .ok { color: var(--pos); font-weight: 600; }
+.weekprog .ok { color: var(--good); font-weight: 600; }
+
+.grades { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.gbtn { min-height: 46px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+.gbtn.on.good { background: var(--good); border-color: var(--good); color: #fff; }
+.gbtn.on.warn { background: var(--warn); border-color: var(--warn); color: #fff; }
+.gbtn.on.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
+.gscale { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.avg { font-weight: 700; }
+.avg.good { color: var(--good); } .avg.warn { color: var(--warn); } .avg.bad { color: var(--bad); }
+
 .pulse { animation: pulse .45s ease; }
 @keyframes pulse { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }
 .linkbtn { align-self: center; color: var(--muted); font-size: 14px; text-decoration: underline; text-underline-offset: 3px; padding: 8px; }
 .hint { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; color: var(--muted); }
-.hint button { color: var(--neg); font-weight: 600; white-space: nowrap; }
+.hint button { color: var(--accent); font-weight: 600; white-space: nowrap; }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
 .wtable { width: 100%; border-collapse: separate; border-spacing: 0 6px; table-layout: fixed; }
 .wtable th { font-size: 12px; color: var(--muted); font-weight: 600; text-align: center; }
-.wtable th.today { color: var(--neg); }
+.wtable th.today { color: var(--accent); }
 .wtable td { text-align: center; padding: 0; }
 .wtable td.hn, .wtable th.hn { text-align: left; font-weight: 600; font-size: 14px; width: 26%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wtable td.cnt, .wtable th.cnt { width: 13%; font-size: 13px; color: var(--muted); }
-.wtable td.cnt.ok { color: var(--pos); font-weight: 700; }
+.wtable td.cnt, .wtable th.cnt { width: 13%; font-size: 13px; color: var(--muted); font-weight: 600; }
+.wtable td.cnt.good { color: var(--good); } .wtable td.cnt.warn { color: var(--warn); } .wtable td.cnt.bad { color: var(--bad); }
+.wtable tr.sep td { border-top: 1px solid var(--line); padding-top: 6px; }
 .cell { width: 100%; max-width: 34px; aspect-ratio: 1; margin: 0 auto; border-radius: 9px; background: var(--empty); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; }
-.cell.pos { background: var(--pos); }
-.cell.neg { background: var(--neg); }
+.cell.good { background: var(--good); }
+.cell.warn { background: var(--warn); }
+.cell.bad { background: var(--bad); }
+.cell.grade { font-size: 14px; }
 .cell.future { background: transparent; border: 1.5px dashed var(--line); }
 .cell.before { opacity: .35; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); justify-content: center; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.legend .good { background: var(--good); } .legend .warn { background: var(--warn); } .legend .bad { background: var(--bad); } .legend .none { background: var(--empty); }
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
 .stat b { font-family: var(--font-display); font-size: 26px; font-weight: 700; }
 .stat span { font-size: 13px; color: var(--muted); }
-.delta.up { color: var(--pos); } .delta.down { color: var(--flame); }
+.stat b.good { color: var(--good); } .stat b.warn { color: var(--warn); } .stat b.bad { color: var(--bad); }
+.delta.up { color: var(--good); } .delta.down { color: var(--bad); }
 
 .hcard { display: flex; flex-direction: column; gap: 12px; }
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .kpi { display: flex; flex-direction: column; }
 .kpi b { font-family: var(--font-display); font-size: 20px; }
+.kpi b.good { color: var(--good); } .kpi b.warn { color: var(--warn); } .kpi b.bad { color: var(--bad); }
 .kpi span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .heat { display: grid; grid-template-rows: repeat(7, auto); grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; }
 .heat i { display: block; aspect-ratio: 1; border-radius: 3px; background: var(--empty); }
-.heat i.pos { background: var(--pos); }
-.heat i.neg { background: var(--neg); }
+.heat i.good { background: var(--good); }
+.heat i.warn { background: var(--warn); }
+.heat i.bad { background: var(--bad); }
 .heat i.fut { background: transparent; }
 .heatlbl { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.months { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.month { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 10px; background: var(--bg); }
+.month span { font-size: 11px; color: var(--muted); }
+.month b { font-family: var(--font-display); font-size: 16px; }
+.month b.good { color: var(--good); } .month b.warn { color: var(--warn); } .month b.bad { color: var(--bad); }
 
 .mlist { display: flex; flex-direction: column; gap: 10px; }
 .mrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .mrow input { flex: 1; min-width: 0; }
 input[type=text] { font: inherit; font-size: 16px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 44px; width: 100%; }
 .btn { min-height: 44px; padding: 0 16px; border-radius: 12px; font-weight: 600; background: var(--fg); color: var(--bg); display: inline-flex; align-items: center; justify-content: center; }
+.btn:disabled { opacity: .4; cursor: default; }
 .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
-.btn.danger { background: var(--flame); color: #fff; }
+.btn.danger { background: var(--bad); color: #fff; }
 .form { display: flex; flex-direction: column; gap: 10px; }
 .form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.form label.filebtn { position: relative; overflow: hidden; flex-direction: row; font-size: 15px; color: var(--fg); }
+.filebtn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .seg { display: flex; gap: 6px; }
 .seg button { flex: 1; min-height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-weight: 600; font-size: 14px; }
 .seg button.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.seg.small button { min-height: 36px; font-size: 13px; }
 .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
 .btnrow > * { flex: 1 1 140px; }
-.btn:disabled { opacity: .4; cursor: default; }
-.form label.filebtn { position: relative; overflow: hidden; flex-direction: row; font-size: 15px; color: var(--fg); }
-.filebtn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .small { font-size: 13px; color: var(--muted); }
 .notice { font-size: 13px; color: var(--muted); text-align: center; padding: 8px; }
-.notice.err { color: var(--flame); }
+.notice.err { color: var(--bad); }
 .intro { display: flex; flex-direction: column; gap: 8px; }
 
 nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line);
@@ -188,6 +225,7 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
 (() => {
   // All data stays in this browser's localStorage. Nothing is sent anywhere.
   const KEY = "streaks-data-v1";
+  const MOOD = "_mood";
   const WD = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
   const WD_LONG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   const MON = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -195,6 +233,7 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
   const BACKUP_DAYS = 14;
   const FLAME = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>';
   const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>';
 
   // ---- dates as day numbers (UTC-based, avoids DST issues) ----
   const todayNum = () => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5; };
@@ -202,8 +241,11 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
   const numOf = k => { const [y, m, d] = k.split("-").map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
   const dow = n => new Date(n * 864e5).getUTCDay();
   const monday = n => n - ((dow(n) + 6) % 7);
+  const monthStart = n => { const d = new Date(n * 864e5); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / 864e5; };
+  const prevMonthStart = n => { const d = new Date(monthStart(n) * 864e5); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1) / 864e5; };
   const fmtLong = n => { const d = new Date(n * 864e5); return `${WD_LONG[d.getUTCDay()]}, ${d.getUTCDate()}. ${MON[d.getUTCMonth()]}`; };
   const fmtShort = n => { const d = new Date(n * 864e5); return `${d.getUTCDate()}.${d.getUTCMonth() + 1}.`; };
+  const monName = n => MON[new Date(n * 864e5).getUTCMonth()].slice(0, 3);
   const kw = n => { const th = monday(n) + 3; const y = new Date(th * 864e5).getUTCFullYear(); const jan4 = Date.UTC(y, 0, 4) / 864e5; return 1 + Math.round((th - (monday(jan4) + 3)) / 7); };
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -211,7 +253,7 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
   const S = {
     habits: [], days: {}, lastBackup: null, error: "", storageOk: true,
     tab: "today", sel: todayNum(), weekOff: 0, manage: false, confirmDel: null,
-    form: { name: "", kind: "pos", mode: "daily", targets: "" }, pulse: null, importData: null, info: "",
+    form: { name: "", kind: "pos", mode: "daily", targets: "", limit: 0 }, pulse: null, importData: null, info: "",
   };
   function load() {
     try {
@@ -229,37 +271,73 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
 
   // ---- habit logic ----
+  // Day value per habit: true = geschafft/clean, false = nicht geschafft/nicht clean, missing = nicht eingetragen.
+  // Weekly-goal habits store an array of completed parts.
   const val = (h, n) => (S.days[keyOf(n)] || {})[h.id];
   const isDone = (h, n) => { const v = val(h, n); return h.mode === "weekly" ? Array.isArray(v) && v.length > 0 : v === true; };
+  const limitOf = h => h.kind === "neg" && h.mode === "daily" && h.limit > 0 ? h.limit : 0;
   const startNum = h => h.created ? numOf(h.created) : todayNum();
   const weekSet = (h, mon) => { const s = new Set(); for (let i = 0; i < 7; i++) { const v = val(h, mon + i); if (Array.isArray(v)) v.forEach(x => s.add(x)); } return s; };
   const weekMet = (h, mon) => { const s = weekSet(h, mon); return (h.targets || []).length > 0 && h.targets.every(t => s.has(t)); };
   const firstDataNum = h => { let min = Infinity; for (const k in S.days) { if (S.days[k][h.id] !== undefined) min = Math.min(min, numOf(k)); } return min; };
   const originNum = h => Math.min(startNum(h), firstDataNum(h));
 
+  // Daily habits: week tally. Slips up to the weekly limit count as buffer, not as failure.
+  function weekScore(h, mon) {
+    const t = todayNum(); let yes = 0, no = 0;
+    for (let d = mon; d < mon + 7 && d <= t; d++) { const v = val(h, d); if (v === true) yes++; else if (v === false) no++; }
+    const buf = Math.min(no, limitOf(h));
+    return { yes, no, buf, miss: no - buf, entered: yes + no, success: yes + buf };
+  }
+  const weekInLimit = (h, mon) => { const s = weekScore(h, mon); return s.entered > 0 && s.miss === 0; };
+  // Color for one day: good / warn (slip inside the buffer) / bad / "" (no entry)
+  function dayState(h, n) {
+    if (h.mode === "weekly") return isDone(h, n) ? "good" : "";
+    const v = val(h, n);
+    if (v === true) return "good";
+    if (v !== false) return "";
+    const L = limitOf(h); if (!L) return "bad";
+    let c = 0; for (let d = monday(n); d <= n; d++) if (val(h, d) === false) c++;
+    return c <= L ? "warn" : "bad";
+  }
+
   function streak(h) {
     const t = todayNum();
     if (h.mode === "weekly") { let m = monday(t); if (!weekMet(h, m)) m -= 7; let c = 0; while (weekMet(h, m)) { c++; m -= 7; } return c; }
-    let d = isDone(h, t) ? t : t - 1, c = 0; while (isDone(h, d)) { c++; d--; } return c;
+    const v = val(h, t); if (v === false) return 0;
+    let d = v === true ? t : t - 1, c = 0; while (val(h, d) === true) { c++; d--; } return c;
+  }
+  function limitStreak(h) {
+    const t = todayNum(); let m = monday(t);
+    if (weekScore(h, m).miss > 0) return 0;
+    if (!weekInLimit(h, m)) m -= 7;
+    let c = 0; while (weekInLimit(h, m)) { c++; m -= 7; } return c;
   }
   function best(h) {
     const t = todayNum(), o = originNum(h); let b = 0, c = 0;
     if (h.mode === "weekly") { for (let m = monday(o); m <= monday(t); m += 7) { c = weekMet(h, m) ? c + 1 : 0; b = Math.max(b, c); } return b; }
-    for (let d = o; d <= t; d++) { c = isDone(h, d) ? c + 1 : 0; b = Math.max(b, c); } return b;
+    for (let d = o; d <= t; d++) { c = val(h, d) === true ? c + 1 : 0; b = Math.max(b, c); } return b;
   }
   const unit = (h, n) => h.mode === "weekly" ? (n === 1 ? "Woche" : "Wochen") : (n === 1 ? "Tag" : "Tage");
   const sorted = () => [...S.habits].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
+  // ---- mood (Schulnote 1–6) ----
+  const mood = n => { const m = (S.days[keyOf(n)] || {})[MOOD]; return typeof m === "number" ? m : null; };
+  function avgMood(a, b) { let s = 0, c = 0; for (let d = a; d <= b; d++) { const m = mood(d); if (m) { s += m; c++; } } return c ? { avg: s / c, n: c } : null; }
+  const fmtAvg = x => x == null ? "–" : x.toFixed(1).replace(".", ",");
+  const gradeCls = g => g == null ? "" : g <= 2.5 ? "good" : g <= 4.5 ? "warn" : "bad";
+  const GRADE_TXT = ["", "sehr gut", "gut", "befriedigend", "ausreichend", "mangelhaft", "ungenügend"];
+
   // ---- mutations ----
   function writeDay(n, obj) {
     const k = keyOf(n), clean = {};
-    for (const f in obj) { const v = obj[f]; if (v === true || (Array.isArray(v) && v.length)) clean[f] = v; }
+    for (const f in obj) { const v = obj[f]; if (v === true || v === false || (Array.isArray(v) && v.length) || (f === MOOD && typeof v === "number")) clean[f] = v; }
     if (Object.keys(clean).length) S.days[k] = clean; else delete S.days[k];
     persist(); render();
   }
-  function toggleDaily(h) {
+  function setDaily(h, value) {
     const cur = { ...(S.days[keyOf(S.sel)] || {}) };
-    if (cur[h.id] === true) delete cur[h.id]; else cur[h.id] = true;
+    if (cur[h.id] === value) delete cur[h.id]; else cur[h.id] = value;
     S.pulse = h.id; writeDay(S.sel, cur);
   }
   function toggleVariant(h, v) {
@@ -267,6 +345,11 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
     const arr = Array.isArray(cur[h.id]) ? [...cur[h.id]] : [];
     const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v);
     cur[h.id] = arr; S.pulse = h.id; writeDay(S.sel, cur);
+  }
+  function setMood(g) {
+    const cur = { ...(S.days[keyOf(S.sel)] || {}) };
+    if (cur[MOOD] === g) delete cur[MOOD]; else cur[MOOD] = g;
+    S.pulse = MOOD; writeDay(S.sel, cur);
   }
 
   // ---- backup ----
@@ -281,7 +364,7 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
     }
     if (!ok) {
       const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name;
-      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); ok = true;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }
     S.lastBackup = keyOf(t); persist(); S.info = "Backup erstellt. Speicher die Datei z. B. in „Dateien“ auf deinem iPhone."; render();
   }
@@ -299,42 +382,68 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
   }
 
   // ---- views ----
+  const streakTag = (s, label) => s > 0 ? `<span class="streak num">${FLAME}${s} ${label}</span>` : "";
+
+  function habitCard(h, n) {
+    const pulse = S.pulse === h.id ? " pulse" : "";
+    const s = streak(h), b = best(h);
+    if (h.mode === "weekly") {
+      const set = weekSet(h, monday(n)), dayV = Array.isArray(val(h, n)) ? val(h, n) : [], met = weekMet(h, monday(n));
+      const got = h.targets.filter(x => set.has(x)).length;
+      const meta = (s > 0 ? streakTag(s, unit(h, s)) : `<span class="streak zero">Noch keine Serie</span>`) + (b > 0 ? `<span class="best num">Rekord ${b}</span>` : "");
+      return `<section class="card${met ? " good" : ""}${pulse}">
+        <div class="row"><div class="hname"><h3>${esc(h.name)}</h3><div class="meta">${meta}</div></div>
+        <span class="tag ${met ? "good" : ""} num">${got}/${h.targets.length} Woche</span></div>
+        <div class="weekprog">${h.targets.map(x => `<span class="${set.has(x) ? "ok" : ""}">${set.has(x) ? "✓" : "○"} ${esc(x)}</span>`).join("")}</div>
+        <div class="variants">${h.targets.map((x, i) => `<button class="vbtn ${dayV.includes(x) ? "on" : ""}" data-act="var" data-id="${esc(h.id)}" data-i="${i}" aria-pressed="${dayV.includes(x)}">${dayV.includes(x) ? "✓ " : "+ "}${esc(x)}</button>`).join("")}</div>
+      </section>`;
+    }
+    const v = val(h, n), st = dayState(h, n), L = limitOf(h), neg = h.kind === "neg";
+    let meta = s > 0 ? streakTag(s, unit(h, s)) : `<span class="streak zero">Noch keine Serie</span>`;
+    if (b > 0) meta += `<span class="best num">Rekord ${b}</span>`;
+    if (L) {
+      const ws = weekScore(h, monday(n)), ls = limitStreak(h);
+      const cls = ws.miss > 0 ? "bad" : ws.buf > 0 ? "warn" : "good";
+      meta += `<span class="buf ${cls} num">${ws.miss > 0 ? `Limit überschritten (${ws.no}/${L})` : `Puffer ${ws.buf}/${L}`}</span>`;
+      if (ls > 0) meta += `<span class="streak num">${FLAME}${ls} ${ls === 1 ? "Woche" : "Wochen"} im Limit</span>`;
+    }
+    return `<section class="card ${st}${pulse}">
+      <div class="row"><div class="hname"><h3>${esc(h.name)}${neg ? ` <span class="tag">clean</span>` : ""}</h3><div class="meta">${meta}</div></div>
+      <div class="choice">
+        <div><button class="cbtn no ${v === false ? "on" : ""} ${st === "warn" ? "buffered" : ""}" data-act="no" data-id="${esc(h.id)}" aria-pressed="${v === false}" aria-label="${esc(h.name)}: ${neg ? "nicht clean" : "nicht geschafft"}">${CROSS}</button><span class="clbl">${neg ? "nicht clean" : "nicht"}</span></div>
+        <div><button class="cbtn yes ${v === true ? "on" : ""}" data-act="yes" data-id="${esc(h.id)}" aria-pressed="${v === true}" aria-label="${esc(h.name)}: ${neg ? "clean" : "geschafft"}">${CHECK}</button><span class="clbl">${neg ? "clean" : "geschafft"}</span></div>
+      </div></div>
+    </section>`;
+  }
+
+  function moodCard(n) {
+    const g = mood(n), t = todayNum();
+    const w = avgMood(monday(n), Math.min(monday(n) + 6, t)), m = avgMood(monthStart(n), Math.min(t, monthStart(monthStart(n) + 31) - 1));
+    const avgTxt = x => x ? `<span class="avg ${gradeCls(x.avg)} num">${fmtAvg(x.avg)}</span>` : "–";
+    return `<section class="card${S.pulse === MOOD ? " pulse" : ""}">
+      <div class="row"><div class="hname"><h3>Arbeit-Mood</h3><div class="meta"><span class="best">${g ? `Note ${g}: ${GRADE_TXT[g]}` : "Wie lief die Arbeit? Optional."}</span></div></div>
+      <div class="best num" style="text-align:right">Ø Woche ${avgTxt(w)}<br>Ø Monat ${avgTxt(m)}</div></div>
+      <div class="grades">${[1, 2, 3, 4, 5, 6].map(x => `<button class="gbtn num ${g === x ? "on " + gradeCls(x) : ""}" data-act="mood" data-g="${x}" aria-pressed="${g === x}" aria-label="Note ${x}, ${GRADE_TXT[x]}">${x}</button>`).join("")}</div>
+      <div class="gscale"><span>sehr gut</span><span>ungenügend</span></div>
+    </section>`;
+  }
+
   function viewToday() {
     const t = todayNum(), n = S.sel, hs = sorted();
-    const doneNow = hs.filter(h => h.mode === "weekly" ? weekMet(h, monday(n)) : isDone(h, n));
-    const openDaily = hs.filter(h => h.mode === "daily" && !isDone(h, n));
-    const pct = hs.length ? doneNow.length / hs.length : 0, C = 2 * Math.PI * 24;
+    const daily = hs.filter(h => h.mode === "daily"), weekly = hs.filter(h => h.mode === "weekly");
+    const doneNow = daily.filter(h => val(h, n) === true).length + weekly.filter(h => weekMet(h, monday(n))).length;
+    const open = daily.filter(h => val(h, n) === undefined);
+    const pct = hs.length ? doneNow / hs.length : 0, C = 2 * Math.PI * 24;
     let msg, sub;
-    if (n !== t) { msg = `${doneNow.length} von ${hs.length} erfüllt`; sub = "Du trägst einen vergangenen Tag nach."; }
+    if (n !== t) { msg = `${doneNow} von ${hs.length} geschafft`; sub = open.length ? `Nicht eingetragen: ${open.map(h => esc(h.name)).join(", ")}` : "Du trägst einen vergangenen Tag nach."; }
     else {
-      const ms = hs.map(h => ({ h, s: streak(h) })).filter(x => MILESTONES.includes(x.s) && (x.h.mode === "weekly" ? weekMet(x.h, monday(t)) : isDone(x.h, t)));
-      if (doneNow.length === hs.length) { msg = "Alles erledigt. Stark!"; sub = ms.length ? `Meilenstein: ${esc(ms[0].h.name)} ${ms[0].s} ${unit(ms[0].h, ms[0].s)} am Stück.` : "Morgen geht die Serie weiter."; }
-      else if (ms.length) { msg = `Meilenstein: ${esc(ms[0].h.name)} – ${ms[0].s} ${unit(ms[0].h, ms[0].s)}!`; sub = openDaily.length ? `Noch offen: ${openDaily.map(h => esc(h.name)).join(", ")}` : "Bleib dran."; }
-      else if (!hs.some(h => isDone(h, t))) { msg = "Neuer Tag, neue Chance."; sub = "Hak das erste Habit ab und halte deine Serien am Leben."; }
-      else if (openDaily.length) { msg = `Noch ${openDaily.length} offen`; sub = openDaily.map(h => esc(h.name)).join(", "); }
-      else { msg = "Tagesziele erledigt"; sub = "Das Wochenziel ist noch offen."; }
+      const ms = hs.map(h => ({ h, s: streak(h) })).filter(x => MILESTONES.includes(x.s) && (x.h.mode === "weekly" ? weekMet(x.h, monday(t)) : val(x.h, t) === true));
+      if (doneNow === hs.length) { msg = "Alles geschafft. Stark!"; sub = ms.length ? `Meilenstein: ${esc(ms[0].h.name)} ${ms[0].s} ${unit(ms[0].h, ms[0].s)} am Stück.` : "Morgen geht die Serie weiter."; }
+      else if (ms.length) { msg = `Meilenstein: ${esc(ms[0].h.name)} – ${ms[0].s} ${unit(ms[0].h, ms[0].s)}!`; sub = open.length ? `Noch offen: ${open.map(h => esc(h.name)).join(", ")}` : "Bleib dran."; }
+      else if (open.length === daily.length && daily.length) { msg = "Neuer Tag, neue Chance."; sub = "Trag ein, wie es heute läuft, und halte deine Serien am Leben."; }
+      else if (open.length) { msg = `Noch ${open.length} offen`; sub = open.map(h => esc(h.name)).join(", "); }
+      else { msg = "Alles eingetragen"; sub = weekly.some(h => !weekMet(h, monday(t))) ? "Das Wochenziel ist noch offen." : "Nicht jeder Tag ist perfekt. Morgen geht's weiter."; }
     }
-    const cards = hs.map(h => {
-      const s = streak(h), b = best(h);
-      const streakHtml = s > 0 ? `<span class="streak num">${FLAME}${s} ${unit(h, s)}</span>` : `<span class="streak zero">Noch keine Serie</span>`;
-      const bestHtml = b > 0 ? `<span class="best num">Rekord ${b}</span>` : "";
-      const pulse = S.pulse === h.id ? " pulse" : "";
-      if (h.mode === "weekly") {
-        const set = weekSet(h, monday(n)), dayV = Array.isArray(val(h, n)) ? val(h, n) : [], met = weekMet(h, monday(n));
-        const got = h.targets.filter(x => set.has(x)).length;
-        return `<section class="card ${h.kind}${met ? " done" : ""}${pulse}">
-          <div class="row"><div class="hname"><h3>${esc(h.name)}</h3><div class="meta">${streakHtml}${bestHtml}</div></div>
-          <span class="tag ${met ? "pos" : "plain"} num">${got}/${h.targets.length} Woche</span></div>
-          <div class="weekprog">${h.targets.map(x => `<span class="${set.has(x) ? "ok" : ""}">${set.has(x) ? "✓" : "○"} ${esc(x)}</span>`).join("")}</div>
-          <div class="variants">${h.targets.map((x, i) => `<button class="vbtn ${dayV.includes(x) ? "on" : ""}" data-act="var" data-id="${esc(h.id)}" data-i="${i}" aria-pressed="${dayV.includes(x)}">${dayV.includes(x) ? "✓ " : "+ "}${esc(x)}</button>`).join("")}</div>
-        </section>`;
-      }
-      const done = isDone(h, n), lbl = h.kind === "neg" ? "clean" : "erledigt";
-      return `<section class="card ${h.kind}${done ? " done" : ""}${pulse}">
-        <div class="row"><div class="hname"><h3>${esc(h.name)} ${h.kind === "neg" ? `<span class="tag neg">clean</span>` : ""}</h3><div class="meta">${streakHtml}${bestHtml}</div></div>
-        <div><button class="check" data-act="tog" data-id="${esc(h.id)}" aria-pressed="${done}" aria-label="${esc(h.name)} ${lbl}">${CHECK}</button><div class="cleanlbl">${lbl}</div></div></div>
-      </section>`;
-    }).join("");
     const needBackup = Object.keys(S.days).length >= 3 && (!S.lastBackup || t - numOf(S.lastBackup) >= BACKUP_DAYS);
     return `
       <header class="dayhead">
@@ -343,10 +452,10 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
         <div class="nav"><button class="iconbtn" data-act="prev" aria-label="Vorheriger Tag">‹</button><button class="iconbtn" data-act="next" aria-label="Nächster Tag" ${n >= t ? "disabled" : ""}>›</button></div>
       </header>
       <div class="summary">
-        <svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle class="track" cx="28" cy="28" r="24"/><circle class="val" cx="28" cy="28" r="24" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}" transform="rotate(-90 28 28)"/><text x="28" y="33" text-anchor="middle" class="num">${doneNow.length}/${hs.length}</text></svg>
+        <svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle class="track" cx="28" cy="28" r="24"/><circle class="val" cx="28" cy="28" r="24" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}" transform="rotate(-90 28 28)"/><text x="28" y="33" text-anchor="middle" class="num">${doneNow}/${hs.length}</text></svg>
         <div><p class="msg">${msg}</p><p class="sub">${sub}</p></div>
       </div>
-      <div class="cards">${cards}</div>
+      <div class="cards">${hs.map(h => habitCard(h, n)).join("")}${moodCard(n)}</div>
       ${needBackup ? `<div class="hint"><span>Deine Daten liegen nur auf diesem iPhone. Zeit für ein Backup.</span><button data-act="backup">Sichern</button></div>` : ""}
       <button class="linkbtn" data-act="manage">Habits &amp; Backup</button>`;
   }
@@ -354,9 +463,10 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
   function weekRate(mon) {
     const t = todayNum(); let done = 0, poss = 0;
     for (const h of S.habits) {
-      const o = originNum(h);
-      if (h.mode === "weekly") { if (mon + 6 < o || mon > t) continue; poss += h.targets.length; const s = weekSet(h, mon); done += h.targets.filter(x => s.has(x)).length; }
-      else for (let d = mon; d < mon + 7 && d <= t; d++) { if (d < o) continue; poss++; if (isDone(h, d)) done++; }
+      if (h.mode === "weekly") {
+        if (mon + 6 < originNum(h) || mon > t) continue;
+        const s = weekSet(h, mon); poss += h.targets.length; done += h.targets.filter(x => s.has(x)).length;
+      } else { const s = weekScore(h, mon); done += s.success; poss += s.entered; }
     }
     return poss ? Math.round(100 * done / poss) : null;
   }
@@ -369,64 +479,107 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
       const cells = WD.map((_, i) => {
         const d = mon + i; let c = "cell", inner = "";
         if (d > t) c += " future";
-        else if (isDone(h, d)) { c += " " + h.kind; if (h.mode === "weekly") inner = val(h, d).map(x => esc(x[0])).join(""); }
-        else if (d < o) c += " before";
+        else {
+          const st = dayState(h, d);
+          if (st) { c += " " + st; if (h.mode === "weekly") inner = val(h, d).map(x => esc(x[0])).join(""); }
+          else if (d < o) c += " before";
+        }
         return `<td><button class="${c}" data-act="openday" data-n="${d}" aria-label="${fmtShort(d)} öffnen" ${d > t ? "disabled" : ""}>${inner}</button></td>`;
       }).join("");
-      let cnt, ok;
-      if (h.mode === "weekly") { ok = weekMet(h, mon); const s = weekSet(h, mon); cnt = ok ? "✓" : `${h.targets.filter(x => s.has(x)).length}/${h.targets.length}`; }
-      else { let c = 0, p = 0; for (let d = mon; d < mon + 7 && d <= t; d++) { p++; if (isDone(h, d)) c++; } cnt = `${c}/${p}`; ok = p > 0 && c === p; }
-      return `<tr><td class="hn">${esc(h.name)}</td>${cells}<td class="cnt num ${ok ? "ok" : ""}">${cnt}</td></tr>`;
+      let cnt, cls = "";
+      if (h.mode === "weekly") {
+        const met = weekMet(h, mon), s = weekSet(h, mon), over = mon + 6 < t;
+        cnt = met ? "✓" : `${h.targets.filter(x => s.has(x)).length}/${h.targets.length}`;
+        cls = met ? "good" : over ? "bad" : "";
+      } else {
+        const s = weekScore(h, mon);
+        cnt = s.entered ? `${s.success}/${s.entered}` : "–";
+        cls = !s.entered ? "" : s.miss > 0 ? "bad" : s.buf > 0 ? "warn" : "good";
+      }
+      return `<tr><td class="hn">${esc(h.name)}</td>${cells}<td class="cnt num ${cls}">${cnt}</td></tr>`;
     }).join("");
+    const moodCells = WD.map((_, i) => { const d = mon + i, g = d <= t ? mood(d) : null;
+      return `<td><button class="cell grade num ${d > t ? "future" : g ? gradeCls(g) : ""}" data-act="openday" data-n="${d}" aria-label="${fmtShort(d)} öffnen" ${d > t ? "disabled" : ""}>${g || ""}</button></td>`; }).join("");
+    const mw = avgMood(mon, Math.min(mon + 6, t)), mp = avgMood(mon - 7, mon - 1);
     const r = weekRate(mon), rp = weekRate(mon - 7), delta = r != null && rp != null ? r - rp : null;
+    const md = mw && mp ? mp.avg - mw.avg : null; // positive = besser (niedrigere Note)
     return `
       <header class="dayhead">
         <div class="title"><span class="eyebrow">KW ${kw(mon)}${S.weekOff === 0 ? " · diese Woche" : ""}</span><h1 class="num">${fmtShort(mon)} – ${fmtShort(mon + 6)}</h1></div>
         <div class="nav"><button class="iconbtn" data-act="wprev" aria-label="Vorherige Woche">‹</button><button class="iconbtn" data-act="wnext" aria-label="Nächste Woche" ${S.weekOff >= 0 ? "disabled" : ""}>›</button></div>
       </header>
       <div class="stats">
-        <div class="stat"><span>Woche erfüllt</span><b class="num">${r == null ? "–" : r + " %"}</b></div>
-        <div class="stat"><span>Vorwoche</span><b class="num">${rp == null ? "–" : rp + " %"}</b>${delta != null ? `<span class="delta num ${delta >= 0 ? "up" : "down"}">${delta >= 0 ? "▲ +" : "▼ "}${delta} Punkte</span>` : ""}</div>
+        <div class="stat"><span>Woche erfüllt</span><b class="num">${r == null ? "–" : r + " %"}</b>${delta != null ? `<span class="delta num ${delta >= 0 ? "up" : "down"}">${delta >= 0 ? "▲ +" : "▼ "}${delta} Punkte zur Vorwoche</span>` : `<span>Puffer zählt als erfüllt</span>`}</div>
+        <div class="stat"><span>Ø Arbeit-Mood</span><b class="num ${mw ? gradeCls(mw.avg) : ""}">${mw ? fmtAvg(mw.avg) : "–"}</b>${md != null ? `<span class="delta num ${md >= 0 ? "up" : "down"}">${md >= 0 ? "▲ besser" : "▼ schlechter"} als Vorwoche (${fmtAvg(mp.avg)})</span>` : `<span>${mw ? mw.n + " Tage bewertet" : "Noch keine Note"}</span>`}</div>
       </div>
       <div class="panel" style="overflow-x:auto">
-        <table class="wtable"><thead><tr><th class="hn"></th>${head}<th class="cnt"></th></tr></thead><tbody>${rows}</tbody></table>
+        <table class="wtable"><thead><tr><th class="hn"></th>${head}<th class="cnt"></th></tr></thead>
+        <tbody>${rows}<tr class="sep"><td class="hn">Mood</td>${moodCells}<td class="cnt num ${mw ? gradeCls(mw.avg) : ""}">${mw ? fmtAvg(mw.avg) : "–"}</td></tr></tbody></table>
       </div>
+      <div class="legend"><span><i class="good"></i>geschafft / clean</span><span><i class="warn"></i>im Puffer</span><span><i class="bad"></i>nicht geschafft</span><span><i class="none"></i>nicht eingetragen</span></div>
       <p class="notice">Tipp auf einen Tag, um ihn nachzutragen.</p>`;
   }
 
   function viewAll() {
     const t = todayNum(), hs = sorted(), WEEKS = 20, start = monday(t) - 7 * (WEEKS - 1);
     let first = Infinity; hs.forEach(h => { first = Math.min(first, originNum(h)); });
+    for (const k in S.days) if (mood(numOf(k))) first = Math.min(first, numOf(k));
+    const heat = cls => { let c = ""; for (let d = start; d < start + WEEKS * 7; d++) c += `<i class="${d > t ? "fut" : cls(d)}"></i>`; return c; };
     const cards = hs.map(h => {
-      const o = originNum(h), s = streak(h), b = best(h);
-      let total, rate;
+      const o = originNum(h), s = streak(h), b = best(h), L = limitOf(h);
+      let k3, k3l, rate, k4l;
       if (h.mode === "weekly") {
         let met = 0, wk = 0; for (let m = monday(o); m <= monday(t); m += 7) { if (m === monday(t) && !weekMet(h, m)) continue; wk++; if (weekMet(h, m)) met++; }
         let sess = 0; for (const k in S.days) { const v = S.days[k][h.id]; if (Array.isArray(v)) sess += v.length; }
-        total = sess; rate = wk ? Math.round(100 * met / wk) : 0;
+        k3 = sess; k3l = "Einheiten"; rate = wk ? Math.round(100 * met / wk) : 0; k4l = "Wochen";
       } else {
-        let c = 0, p = 0; for (let d = o; d <= t; d++) { if (d === t && !isDone(h, t)) continue; p++; if (isDone(h, d)) c++; }
-        total = c; rate = p ? Math.round(100 * c / p) : 0;
+        let succ = 0, ent = 0, yes = 0; for (let m = monday(o); m <= monday(t); m += 7) { const w = weekScore(h, m); succ += w.success; ent += w.entered; yes += w.yes; }
+        k3 = yes; k3l = h.kind === "neg" ? "Clean" : "Tage"; rate = ent ? Math.round(100 * succ / ent) : 0; k4l = "Quote";
       }
-      let cells = "";
-      for (let d = start; d < start + WEEKS * 7; d++) cells += `<i class="${d > t ? "fut" : isDone(h, d) ? h.kind : ""}"></i>`;
+      const rcls = rate >= 80 ? "good" : rate >= 50 ? "warn" : "bad";
+      let extra = "";
+      if (L) { let ok = 0, wk = 0; for (let m = monday(o); m <= monday(t); m += 7) { const w = weekScore(h, m); if (!w.entered) continue; wk++; if (!w.miss) ok++; }
+        extra = `<span class="small num">Limit ${L}× pro Woche · ${ok} von ${wk} Wochen im Limit · Serie ${limitStreak(h)} ${limitStreak(h) === 1 ? "Woche" : "Wochen"}</span>`; }
       return `<section class="panel hcard">
-        <div class="row"><h2>${esc(h.name)}</h2><span class="tag ${h.kind}">${h.kind === "neg" ? "clean-Tage" : h.mode === "weekly" ? "Wochenziel" : "täglich"}</span></div>
+        <div class="row"><h2>${esc(h.name)}</h2><span class="tag">${h.kind === "neg" ? (L ? `clean · Limit ${L}/Woche` : "clean-Tage") : h.mode === "weekly" ? "Wochenziel" : "täglich"}</span></div>
         <div class="kpis">
           <div class="kpi"><b class="num" style="color:var(--flame)">${s}</b><span>Serie</span></div>
           <div class="kpi"><b class="num">${b}</b><span>Rekord</span></div>
-          <div class="kpi"><b class="num">${total}</b><span>${h.mode === "weekly" ? "Einheiten" : "Tage"}</span></div>
-          <div class="kpi"><b class="num">${rate}%</b><span>${h.mode === "weekly" ? "Wochen" : "Quote"}</span></div>
+          <div class="kpi"><b class="num">${k3}</b><span>${k3l}</span></div>
+          <div class="kpi"><b class="num ${rcls}">${rate}%</b><span>${k4l}</span></div>
         </div>
-        <div class="heat" aria-label="Letzte 20 Wochen">${cells}</div>
+        ${extra}
+        <div class="heat" aria-label="Letzte 20 Wochen">${heat(d => dayState(h, d))}</div>
         <div class="heatlbl num"><span>${fmtShort(start)}</span><span>heute</span></div>
       </section>`;
     }).join("");
+    // Mood overview: averages per month for the last 6 months
+    const ms = monthStart(t), pm = prevMonthStart(t);
+    const cur = avgMood(ms, t), prev = avgMood(pm, ms - 1), all = avgMood(isFinite(first) ? first : t, t);
+    let monthsHtml = "", m0 = ms; const list = [];
+    for (let i = 0; i < 6; i++) { list.unshift(m0); m0 = prevMonthStart(m0); }
+    monthsHtml = list.map((a, i) => { const b = i < 5 ? list[i + 1] - 1 : t, x = avgMood(a, b);
+      return `<div class="month"><span>${monName(a)}</span><b class="num ${x ? gradeCls(x.avg) : ""}">${x ? fmtAvg(x.avg) : "–"}</b></div>`; }).join("");
+    const moodPanel = `<section class="panel hcard">
+        <div class="row"><h2>Arbeit-Mood</h2><span class="tag">Schulnote 1–6</span></div>
+        <div class="kpis">
+          <div class="kpi"><b class="num ${cur ? gradeCls(cur.avg) : ""}">${cur ? fmtAvg(cur.avg) : "–"}</b><span>${monName(ms)}</span></div>
+          <div class="kpi"><b class="num ${prev ? gradeCls(prev.avg) : ""}">${prev ? fmtAvg(prev.avg) : "–"}</b><span>${monName(pm)}</span></div>
+          <div class="kpi"><b class="num ${all ? gradeCls(all.avg) : ""}">${all ? fmtAvg(all.avg) : "–"}</b><span>Gesamt</span></div>
+          <div class="kpi"><b class="num">${all ? all.n : 0}</b><span>Tage</span></div>
+        </div>
+        <div class="months">${monthsHtml}</div>
+        <div class="heat" aria-label="Mood der letzten 20 Wochen">${heat(d => gradeCls(mood(d)))}</div>
+        <div class="heatlbl num"><span>${fmtShort(start)}</span><span>heute</span></div>
+      </section>`;
     return `
       <header class="dayhead"><div class="title"><span class="eyebrow">Gesamtüberblick</span><h1>Deine Serien</h1>
       ${isFinite(first) ? `<span class="best num">Getrackt seit ${fmtLong(first)} · ${t - first + 1} ${t - first + 1 === 1 ? "Tag" : "Tage"}</span>` : ""}</div></header>
-      ${cards}`;
+      ${cards}${moodPanel}
+      <div class="legend"><span><i class="good"></i>geschafft / Note 1–2</span><span><i class="warn"></i>Puffer / Note 3–4</span><span><i class="bad"></i>nicht geschafft / Note 5–6</span></div>`;
   }
+
+  const limitSeg = (cur, act, id) => `<div class="seg small">${[0, 1, 2, 3, 4].map(x => `<button type="button" data-act="${act}" ${id ? `data-id="${esc(id)}"` : ""} data-v="${x}" class="${(cur || 0) === x ? "on" : ""}">${x === 0 ? "Kein" : x + "×"}</button>`).join("")}</div>`;
 
   function viewManage() {
     const hs = sorted(), f = S.form, first = !hs.length;
@@ -438,13 +591,14 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
           <button class="iconbtn" data-act="del" data-id="${esc(h.id)}" aria-label="Löschen">✕</button>
         </div>
         <span class="small">${h.kind === "neg" ? "Negativ (clean abhaken)" : "Positiv"} · ${h.mode === "weekly" ? "Wochenziel: " + h.targets.map(esc).join(" + ") : "täglich"}</span>
+        ${h.kind === "neg" && h.mode === "daily" ? `<span class="small">Erlaubte Ausrutscher pro Woche (Puffer)</span>${limitSeg(h.limit, "setlimit", h.id)}` : ""}
         ${S.confirmDel === h.id ? `<div class="mrow"><span style="flex:1 1 100%;font-size:14px">${esc(h.name)} und alle Einträge dazu löschen?</span><button class="btn danger" data-act="delyes" data-id="${esc(h.id)}">Löschen</button><button class="btn ghost" data-act="delno">Abbrechen</button></div>` : ""}
       </div>`).join("");
     const imp = S.importData;
     return `
       <header class="dayhead"><div class="title"><span class="eyebrow">${first ? "Einrichten" : "Einstellungen"}</span><h1>${first ? "Willkommen" : "Habits & Backup"}</h1></div>
       ${first ? "" : `<button class="btn" data-act="done">Fertig</button>`}</header>
-      ${first ? `<div class="panel intro"><p><b>Leg deine Habits an.</b> Positive Habits hakst du ab, wenn du sie gemacht hast. Bei negativen hakst du ab, wenn du den Tag clean warst.</p><p class="small">Alles wird nur auf diesem Gerät gespeichert. Nichts wird hochgeladen.</p></div>` : ""}
+      ${first ? `<div class="panel intro"><p><b>Leg deine Habits an.</b> Bei positiven Habits trägst du ein, ob du sie geschafft hast. Bei negativen trägst du ein, ob du den Tag clean warst.</p><p class="small">Alles wird nur auf diesem Gerät gespeichert. Nichts wird hochgeladen.</p></div>` : ""}
       ${list ? `<div class="mlist">${list}</div>` : ""}
       <form class="panel form" id="addform" autocomplete="off">
         <h2>Neues Habit</h2>
@@ -452,6 +606,7 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
         <label>Art<div class="seg"><button type="button" data-act="fkind" data-v="pos" class="${f.kind === "pos" ? "on" : ""}">Positiv</button><button type="button" data-act="fkind" data-v="neg" class="${f.kind === "neg" ? "on" : ""}">Negativ (clean)</button></div></label>
         <label>Rhythmus<div class="seg"><button type="button" data-act="fmode" data-v="daily" class="${f.mode === "daily" ? "on" : ""}">Täglich</button><button type="button" data-act="fmode" data-v="weekly" class="${f.mode === "weekly" ? "on" : ""}">Wochenziel</button></div></label>
         ${f.mode === "weekly" ? `<label>Was pro Woche je 1× erledigt sein soll (mit Komma)<input type="text" id="f-targets" value="${esc(f.targets)}" placeholder="z. B. Ausdauer, Kraft"></label>` : ""}
+        ${f.kind === "neg" && f.mode === "daily" ? `<label>Erlaubte Ausrutscher pro Woche (Puffer)${limitSeg(f.limit, "flimit")}</label>` : ""}
         <button class="btn" type="submit">Hinzufügen</button>
       </form>
       <section class="panel form">
@@ -490,9 +645,11 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
   app.addEventListener("click", e => {
     const b = e.target.closest("[data-act]"); if (!b || b.tagName === "INPUT") return;
     const a = b.dataset.act, h = b.dataset.id ? byId(b.dataset.id) : null, t = todayNum();
-    if (!["backup"].includes(a)) flash();
-    if (a === "tog" && h) toggleDaily(h);
+    if (a !== "backup") flash();
+    if (a === "yes" && h) setDaily(h, true);
+    else if (a === "no" && h) setDaily(h, false);
     else if (a === "var" && h) toggleVariant(h, h.targets[+b.dataset.i]);
+    else if (a === "mood") setMood(+b.dataset.g);
     else if (a === "prev") { S.sel--; render(); }
     else if (a === "next") { S.sel = Math.min(t, S.sel + 1); render(); }
     else if (a === "gotoday") { S.sel = t; render(); }
@@ -513,8 +670,10 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
       const i = hs.indexOf(h); if (i > 0) { h.order = i - 1; hs[i - 1].order = i; }
       persist(); render();
     }
+    else if (a === "setlimit" && h) { const v = +b.dataset.v; if (v > 0) h.limit = v; else delete h.limit; persist(); render(); }
     else if (a === "fkind") { S.form.kind = b.dataset.v; render(); }
     else if (a === "fmode") { S.form.mode = b.dataset.v; render(); }
+    else if (a === "flimit") { S.form.limit = +b.dataset.v; render(); }
     else if (a === "backup") { exportBackup(); }
     else if (a === "impno") { S.importData = null; render(); }
     else if (a === "impyes" && S.importData) {
@@ -543,7 +702,8 @@ nav.tabs button.on { color: var(--fg); background: var(--bg); }
       h.targets = [...new Set(f.targets.split(",").map(s => s.trim()).filter(Boolean))].slice(0, 4).map(s => s.slice(0, 20));
       if (!h.targets.length) { S.error = "Bitte gib mindestens ein Wochenziel ein, z. B. „Ausdauer, Kraft“."; render(); return; }
     }
-    S.habits.push(h); S.form = { name: "", kind: "pos", mode: "daily", targets: "" };
+    if (f.kind === "neg" && f.mode === "daily" && f.limit > 0) h.limit = f.limit;
+    S.habits.push(h); S.form = { name: "", kind: "pos", mode: "daily", targets: "", limit: 0 };
     persist(); S.info = `„${esc(h.name)}“ hinzugefügt.`; render();
   });
   // Coming back to the app on a new day: jump to today.
